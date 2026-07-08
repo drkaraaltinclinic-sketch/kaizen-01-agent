@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAIZEN-01 · 改善</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#140a10;--surface:#241220;--border:#4a2440;--dim:#623054;--muted:#7a3c68;
+  --soft:#b06898;--bright:#e0a0c8;--white:#f8d0e8;--hi:#ffe8f4;
+  --green:#27c97a;--red:#e05050;--amber:#e8a020;--blue:#4a90d9;--sakura:#f9a8d4;--purple:#a78bfa;
+}
+body{background:var(--bg);color:var(--white);font-family:'SF Mono','Fira Code','Courier New',monospace;font-size:11px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.titlebar{background:#0c060a;border-bottom:1px solid var(--border);padding:9px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.dots{display:flex;gap:6px}.dot{width:12px;height:12px;border-radius:50%}
+.agent-id{color:var(--soft);font-size:10px;letter-spacing:.1em;display:flex;align-items:center;gap:8px;flex:1;margin-left:6px}
+.badge{font-size:9px;padding:2px 8px;border-radius:3px;letter-spacing:.1em;font-weight:700}
+.b-live{background:rgba(39,201,122,.1);border:1px solid rgba(39,201,122,.25);color:var(--green)}
+.b-sk{background:rgba(249,168,212,.12);border:1px solid rgba(249,168,212,.3);color:var(--sakura)}
+.b-warn{background:rgba(232,160,32,.1);border:1px solid rgba(232,160,32,.25);color:var(--amber)}
+#uptime{margin-left:auto;color:var(--muted);font-size:9px}
+.layout{display:grid;grid-template-columns:1fr 300px;flex:1;overflow:hidden;min-height:0}
+.col{display:flex;flex-direction:column;overflow:hidden}
+.col-right{border-left:1px solid var(--border)}
+.phdr{background:#0c060a;border-bottom:1px solid var(--border);padding:6px 10px;display:flex;align-items:center;gap:6px;color:var(--soft);font-size:9px;letter-spacing:.12em;flex-shrink:0}
+.phdr i{font-size:13px}
+.phdr-pill{margin-left:auto;font-size:8px;padding:1px 6px;border-radius:2px;background:rgba(249,168,212,.12);color:var(--sakura);border:1px solid rgba(249,168,212,.25)}
+.scroll{overflow-y:auto;flex:1}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+.task{margin:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px}
+.task-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pri{font-size:7px;padding:1px 6px;border-radius:2px;font-weight:800}
+.pri-P1{background:rgba(224,80,80,.15);color:var(--red);border:1px solid rgba(224,80,80,.35)}
+.pri-P2{background:rgba(232,160,32,.12);color:var(--amber);border:1px solid rgba(232,160,32,.3)}
+.pri-P3{background:rgba(74,144,217,.1);color:var(--blue);border:1px solid rgba(74,144,217,.25)}
+.tgt{font-size:10px;font-weight:800;color:var(--hi)}
+.cat{font-size:7px;color:var(--muted);letter-spacing:.06em}
+.st{font-size:7px;padding:1px 6px;border-radius:2px;font-weight:800;margin-left:auto}
+.st-PROPOSED{background:rgba(249,168,212,.12);color:var(--sakura);border:1px solid rgba(249,168,212,.3)}
+.st-ACCEPTED{background:rgba(74,144,217,.12);color:var(--blue);border:1px solid rgba(74,144,217,.3)}
+.st-DEPLOYED{background:rgba(39,201,122,.12);color:var(--green);border:1px solid rgba(39,201,122,.3)}
+.st-MEASURED{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.st-REJECTED{background:rgba(98,48,84,.3);color:var(--muted);border:1px solid var(--dim)}
+.task-title{font-size:11px;font-weight:700;color:var(--hi);margin-top:6px}
+.task-line{font-size:9px;line-height:1.6;margin-top:4px}
+.task-line b{color:var(--bright)}
+.k{color:var(--muted)}
+.remedy{background:rgba(249,168,212,.06);border:1px dashed rgba(249,168,212,.3);border-radius:4px;padding:5px 8px;margin-top:6px;font-size:9px;color:var(--hi)}
+.impact-note{margin-top:6px;font-size:9px;color:var(--purple);font-style:italic}
+.actions{display:flex;gap:6px;margin-top:8px}
+.act{font-size:8px;padding:4px 9px;border-radius:4px;cursor:pointer;font-family:inherit;font-weight:700;border:1px solid var(--dim);background:transparent;color:var(--soft)}
+.act:hover{border-color:var(--sakura);color:var(--sakura)}
+.ev{display:flex;gap:7px;align-items:flex-start;padding:4px 10px;border-bottom:1px solid #0e0810;animation:slide .2s ease}
+@keyframes slide{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+.ev-ts{color:var(--muted);font-size:8px;flex-shrink:0;margin-top:1px;min-width:44px}
+.ev-tag{font-size:8px;padding:1px 5px;border-radius:2px;flex-shrink:0;font-weight:700;min-width:44px;text-align:center}
+.ev-body{color:var(--bright);font-size:9px;line-height:1.5;flex:1}
+.ev-body b{color:var(--hi)}
+.t-task{background:rgba(249,168,212,.12);color:var(--sakura);border:1px solid rgba(249,168,212,.25)}
+.t-alert{background:rgba(224,80,80,.15);color:var(--red);border:1px solid rgba(224,80,80,.3)}
+.t-sys{background:rgba(122,60,104,.25);color:var(--soft);border:1px solid var(--dim)}
+.btn{margin:8px 10px;padding:9px;border:1px solid rgba(249,168,212,.4);background:rgba(249,168,212,.1);color:var(--sakura);border-radius:5px;font-family:inherit;font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer}
+.btn:hover{background:rgba(249,168,212,.2)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);flex-shrink:0}
+.stat-item{padding:7px 10px;border-right:1px solid var(--border);text-align:center}
+.stat-item:last-child{border-right:none}
+.stat-num{color:var(--hi);font-size:14px;font-weight:700}
+.stat-lbl{color:var(--muted);font-size:8px;margin-top:2px}
+.bottombar{background:#0c060a;border-top:1px solid var(--border);padding:6px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.bb{font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.bb b{color:var(--soft)}.bb-sep{color:var(--dim)}
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.empty{padding:20px;text-align:center;color:var(--muted);font-size:10px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="dots"><div class="dot" style="background:#ff5f57"></div><div class="dot" style="background:#febc2e"></div><div class="dot" style="background:#28c840"></div></div>
+  <div class="agent-id">
+    <span style="color:var(--soft)">agent://</span><span style="color:var(--sakura)">KAIZEN-01</span>
+    <span style="color:var(--dim)">—</span>
+    <span style="color:var(--muted)">改善 Continuous Improvement · observe → propose → deliver → measure</span>
+    <span class="badge b-live" id="main-badge">CONNECTING</span>
+    <span class="badge b-sk">🌸 KAIZEN PROPOSES, HUMANS DEPLOY</span>
+  </div>
+  <span id="uptime">UP: 00:00:00</span>
+</div>
+
+<div class="layout">
+  <div class="col">
+    <div class="phdr"><i class="ti ti-list-check"></i> IMPROVEMENT BACKLOG <span class="phdr-pill" id="task-count">0 tasks</span></div>
+    <div class="scroll" id="task-list"><div class="empty">🌸 The first kaizen cycle runs after 1 hour of observation<br>— or press CYCLE NOW once a few agents have been heard —<br><br>Tasks arrive with exact remedies: mark them ACCEPT → DEPLOYED as you apply them,<br>and Kaizen measures the impact next cycle.</div></div>
+  </div>
+
+  <div class="col col-right">
+    <div class="phdr"><i class="ti ti-satellite"></i> IMPROVEMENT BUS <span class="phdr-pill" id="ev-count">0</span></div>
+    <div class="scroll" id="event-stream"><div class="empty">Connecting...</div></div>
+    <button class="btn" onclick="cycleNow()"><i class="ti ti-refresh-dot"></i> CYCLE NOW</button>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num" id="st-cycles">0</div><div class="stat-lbl">cycles</div></div>
+      <div class="stat-item"><div class="stat-num" id="st-tasks">0</div><div class="stat-lbl">tasks born</div></div>
+      <div class="stat-item"><div class="stat-num" id="st-heard">0</div><div class="stat-lbl">agents heard</div></div>
+      <div class="stat-item"><div class="stat-num" id="st-brain" style="color:var(--red)">OFF</div><div class="stat-lbl">claude brain</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="bottombar">
+  <div class="bb"><span class="pulse" id="bb-pulse"></span> <b id="bb-status">CONNECTING</b></div>
+  <span class="bb-sep">|</span>
+  <div class="bb">MEMORY <b id="bb-mem">0h</b></div>
+  <span class="bb-sep">|</span>
+  <div class="bb">BRAIN <b id="bb-brain" style="color:var(--red)">—</b></div>
+  <span class="bb-sep">|</span>
+  <div class="bb">GECKO <b id="bb-gecko" style="color:var(--red)">OFFLINE</b></div>
+  <span class="bb-sep">|</span>
+  <div class="bb" style="margin-left:auto">KAIZEN-01 v1.0.0 · Railway</div>
+</div>
+
+<script>
+let ws=null, tasks={}, evTotal=0, uptimeSec=0;
+function ts(){return new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+
+function pushEvent(type,tagClass,body){
+  const s=document.getElementById('event-stream');
+  if(s.children.length===1&&s.children[0].className==='empty')s.innerHTML='';
+  const d=document.createElement('div');d.className='ev';
+  d.innerHTML=`<span class="ev-ts">${ts()}</span><span class="ev-tag ${tagClass}">${type}</span><span class="ev-body">${body}</span>`;
+  s.insertBefore(d,s.firstChild);
+  if(s.children.length>60)s.removeChild(s.lastChild);
+  evTotal++;document.getElementById('ev-count').textContent=evTotal;
+}
+
+function renderTasks(){
+  const el=document.getElementById('task-list');
+  const list=Object.values(tasks).sort((a,b)=>b.id-a.id);
+  if(!list.length)return;
+  el.innerHTML='';
+  list.forEach(t=>{
+    const c=document.createElement('div');c.className='task';
+    c.innerHTML=`
+      <div class="task-top">
+        <span class="pri pri-${t.priority}">${t.priority}</span>
+        <span class="tgt">${t.target}</span>
+        <span class="cat">${(t.category||'').replace(/_/g,' ')} · ${t.effort||''}</span>
+        <span class="st st-${t.status}">${t.status}</span>
+      </div>
+      <div class="task-title">#${t.id} ${t.title}</div>
+      <div class="task-line"><span class="k">observed:</span> ${t.rationale||''}</div>
+      <div class="remedy">🔧 ${t.remedy||''}</div>
+      <div class="task-line"><span class="k">expected:</span> <b>${t.expectedImpact||''}</b></div>
+      ${t.impactNote?`<div class="impact-note">📏 measured: ${t.impactNote}</div>`:''}
+      <div class="actions">
+        ${t.status==='PROPOSED'?`<button class="act" onclick="setStatus(${t.id},'ACCEPTED')">ACCEPT</button><button class="act" onclick="setStatus(${t.id},'REJECTED')">REJECT</button>`:''}
+        ${t.status==='ACCEPTED'?`<button class="act" onclick="setStatus(${t.id},'DEPLOYED')">MARK DEPLOYED</button>`:''}
+      </div>`;
+    el.appendChild(c);
+  });
+  document.getElementById('task-count').textContent=list.length+' tasks';
+}
+
+function setStatus(id,status){if(ws?.readyState===1)ws.send(JSON.stringify({type:'TASK_STATUS',id,status}));}
+function cycleNow(){if(ws?.readyState===1){ws.send(JSON.stringify({type:'CYCLE'}));pushEvent('SYS','t-sys','Kaizen cycle requested...');}}
+
+function handleEvent(ev){
+  const d=ev.data;
+  switch(ev.topic){
+    case 'kaizen.handshake':
+      setStatus2('LIVE','var(--green)');
+      document.getElementById('bb-gecko').textContent=d.geckoConnected?'LIVE':'OFFLINE';
+      document.getElementById('bb-gecko').style.color=d.geckoConnected?'var(--green)':'var(--red)';
+      document.getElementById('bb-brain').textContent=d.scoringEnabled?(d.model||'ON'):'NO KEY';
+      document.getElementById('bb-brain').style.color=d.scoringEnabled?'var(--green)':'var(--red)';
+      document.getElementById('st-brain').textContent=d.scoringEnabled?'ON':'OFF';
+      document.getElementById('st-brain').style.color=d.scoringEnabled?'var(--green)':'var(--red)';
+      document.getElementById('st-heard').textContent=d.agentsHeard||0;
+      document.getElementById('bb-mem').textContent=(d.historyHours||0)+'h';
+      if(d.stats){document.getElementById('st-cycles').textContent=d.stats.cycles||0;
+        document.getElementById('st-tasks').textContent=d.stats.taskTotal||0;}
+      if(d.tasks)d.tasks.forEach(t=>tasks[t.id]=t);
+      renderTasks();
+      pushEvent('SYS','t-sys','Connected to <b>KAIZEN-01</b> — 改善 the loop begins');
+      break;
+    case 'kaizen.task':
+      tasks[d.id]=d;renderTasks();
+      document.getElementById('st-tasks').textContent=Math.max(parseInt(document.getElementById('st-tasks').textContent)||0,d.id);
+      pushEvent('TASK','t-task',`Task #${d.id} [${d.priority}] <b>${d.target}</b> — ${d.title}`);
+      break;
+    case 'kaizen.task.update':
+      if(tasks[d.id]){tasks[d.id].status=d.status;renderTasks();}
+      pushEvent('TASK','t-task',`Task #${d.id} → <b>${d.status}</b>`);
+      break;
+    case 'kaizen.impact':
+      if(tasks[d.id]){tasks[d.id].impactNote=d.assessment;tasks[d.id].status='MEASURED';renderTasks();}
+      pushEvent('SYS','t-sys',`📏 Impact #${d.id}: ${d.assessment}`);
+      break;
+    case 'kaizen.alert':
+      pushEvent('ALERT','t-alert',`<b>${d.asset}</b> ${d.type} — ${d.message}`);
+      break;
+    case 'kaizen.cycle.start':pushEvent('SYS','t-sys',`Cycle #${d.cycle} started (${d.model})`);break;
+    case 'kaizen.cycle.complete':
+      document.getElementById('st-cycles').textContent=d.cycle;
+      pushEvent('SYS','t-sys',`Cycle #${d.cycle} — <b>${d.newTasks}</b> new tasks · ${d.assessed} impacts measured · backlog ${d.backlog}`);
+      break;
+    case 'kaizen.error':pushEvent('ALERT','t-alert',`<b>ERROR:</b> ${d.message}`);break;
+    case 'kaizen.gecko.connected':
+      document.getElementById('bb-gecko').textContent='LIVE';document.getElementById('bb-gecko').style.color='var(--green)';break;
+  }
+}
+
+function setStatus2(txt,col){
+  const b=document.getElementById('main-badge');
+  b.textContent=txt;b.className='badge '+(txt==='LIVE'?'b-live':'b-warn');
+  document.getElementById('bb-status').textContent=txt;
+  document.getElementById('bb-pulse').style.background=col;
+}
+
+function connect(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  ws=new WebSocket(`${proto}://${location.host}/?agent=DASHBOARD`);
+  ws.onopen=()=>setStatus2('LIVE','var(--green)');
+  ws.onmessage=e=>{try{handleEvent(JSON.parse(e.data));}catch(err){}};
+  ws.onclose=()=>{setStatus2('RECONNECTING','var(--amber)');setTimeout(connect,4000);};
+  ws.onerror=()=>setStatus2('ERROR','var(--red)');
+  setInterval(()=>{if(ws?.readyState===1)ws.send(JSON.stringify({type:'PING'}));},20000);
+}
+
+setInterval(()=>{
+  uptimeSec++;
+  const h=Math.floor(uptimeSec/3600).toString().padStart(2,'0');
+  const m=Math.floor((uptimeSec%3600)/60).toString().padStart(2,'0');
+  const s=(uptimeSec%60).toString().padStart(2,'0');
+  document.getElementById('uptime').textContent=`UP: ${h}:${m}:${s}`;
+},1000);
+
+connect();
+</script>
+</body>
+</html>
