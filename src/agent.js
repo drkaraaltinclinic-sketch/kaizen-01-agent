@@ -39,6 +39,23 @@ function reportError(msg){ if(state.lastError===msg)return; state.lastError=msg;
   state.errors.push({time:new Date().toISOString(),message:msg}); state.errors=state.errors.slice(-10);
   emit('ERROR','kaizen.error',{message:msg},'HIGH'); }
 
+// Robust JSON extraction — LLMs sometimes append prose after the closing brace
+function extractJson(text) {
+  const start = text.indexOf('{');
+  if (start < 0) throw new Error('no JSON object in response');
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') inStr = !inStr;
+    if (inStr) continue;
+    if (ch === '{') depth++;
+    if (ch === '}') { depth--; if (depth === 0) return JSON.parse(text.slice(start, i + 1)); }
+  }
+  throw new Error('unbalanced JSON in response');
+}
+
 // ─── Observe: bus ingestion with trend memory ─────────────────────────────────
 function ingest(msg) {
   let id = msg.agentId, stats = null;
@@ -133,8 +150,8 @@ Propose 1-4 NEW improvement tasks. Quality over quantity — an empty list is ac
     });
     if (!res.ok) throw new Error(`Anthropic ${res.status}`);
     const j = await res.json();
-    let text = (j.content || []).map(c => c.text || '').join('').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-    const out = JSON.parse(text);
+    const text = (j.content || []).map(c => c.text || '').join('').trim();
+    const out = extractJson(text);
     // Impact assessments close the loop on deployed tasks
     (out.impactAssessments || []).forEach(ia => {
       const t = state.tasks.find(x => x.id === ia.taskId);
