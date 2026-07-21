@@ -74,7 +74,8 @@ function ingest(msg) {
     state.auditEchoes = state.auditEchoes.slice(0, 20);
   }
   if (msg.topic === 'vizier.memo' && msg.data) {
-    state.vizierEchoes.unshift({ t: new Date().toISOString(), asset: msg.data.asset, verdict: msg.data.verdict });
+    state.vizierEchoes.unshift({ t: new Date().toISOString(), asset: msg.data.asset, direction: msg.data.direction,
+      verdict: msg.data.verdict, reason: (msg.data.reason || '').slice(0, 300), thesisTag: msg.data.thesisTag || null });
     state.vizierEchoes = state.vizierEchoes.slice(0, 30);
   }
 }
@@ -105,6 +106,20 @@ function trendSummary() {
   }));
 }
 
+// Surfaces recurring contrarian-thesis tags across recent Vizier memos so KAIZEN can catch
+// "same bet, different ticker" patterns that MATRIX's price-correlation clustering misses.
+function thesisClusterSummary() {
+  const byTag = {};
+  state.vizierEchoes.forEach(e => {
+    if (!e.thesisTag) return;
+    const b = byTag[e.thesisTag] || { occurrences: 0, assets: [] };
+    b.occurrences++;
+    if (!b.assets.includes(e.asset)) b.assets.push(e.asset);
+    byTag[e.thesisTag] = b;
+  });
+  return byTag;
+}
+
 async function kaizenCycle() {
   if (!ANTHROPIC_API_KEY) { reportError('ANTHROPIC_API_KEY not set — observation-only mode'); return; }
   if (state.running) return;
@@ -120,13 +135,19 @@ async function kaizenCycle() {
 ${JSON.stringify(trendSummary(), null, 1)}
 
 COUNCIL ECHOES — recent AUDITOR grades: ${JSON.stringify(state.auditEchoes.slice(0, 5))}
-Recent VIZIER verdicts: ${JSON.stringify(state.vizierEchoes.slice(0, 8))}
+Recent VIZIER memos (asset, direction, verdict, reason, thesisTag): ${JSON.stringify(state.vizierEchoes.slice(0, 12))}
+THESIS-CLUSTER COUNTS — same underlying directional bet expressed across DIFFERENT assets, tagged
+at execution (occurrences ≥3 across ≥2 assets means the price-correlation cluster cap is being
+bypassed by a thesis that isn't price-correlated): ${JSON.stringify(thesisClusterSummary())}
 
 CURRENTLY OPEN TASKS (do NOT duplicate these):
 ${JSON.stringify(openTasks, null, 1)}
 
 RECENTLY DEPLOYED (assess impact if trends allow):
 ${JSON.stringify(doneRecent, null, 1)}
+
+If THESIS-CLUSTER COUNTS shows any tag with occurrences ≥3 across ≥2 assets, treat that as strong,
+already-evidenced signal worth a task on its own — even if per-agent alert rates look otherwise normal.
 
 Propose 1-4 NEW improvement tasks. Quality over quantity — an empty list is acceptable if nothing genuine emerges. Prefer ENV_VAR remedies (tunable without code). Return ONLY JSON, no fences:
 {
