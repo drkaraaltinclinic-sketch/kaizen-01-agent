@@ -241,7 +241,16 @@ app.post('/cycle',(_,res)=>{kaizenCycle();res.json({ok:true});});
 app.post('/task/:id/:status',(req,res)=>{
   const t=setTaskStatus(parseInt(req.params.id),req.params.status.toUpperCase());
   if(!t)return res.status(404).json({error:'task not found'});
-  res.json(t);});
+  res.json(t);}); 
+const { mountKaizenBrain } = require('./kaizen-brain');
+const brain = mountKaizenBrain(app, {
+  getState: () => state,
+  setTaskStatus, emit, fetchFn: fetch,
+  stateDir: process.env.STATE_DIR || (require('fs').existsSync('/data') ? '/data' : './data'),
+  reportUrl: process.env.SUPREME_REPORT_URL ||
+    'https://supreme-leader-production-5890.up.railway.app/api/report/weekly.json',
+});
+brain.restore();
 server.listen(PORT,()=>{
   console.log('\n╔════════════════════════════════════════════════╗');
   console.log('║   KAIZEN-01 — 改善 Continuous Improvement       ║');
