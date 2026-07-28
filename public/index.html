@@ -164,7 +164,23 @@ function renderTasks(){
   document.getElementById('task-count').textContent=list.length+' tasks';
 }
 
-function setStatus(id,status){if(ws?.readyState===1)ws.send(JSON.stringify({type:'TASK_STATUS',id,status}));}
+function setStatus(id,status){
+  // HTTP first — always works even when the WebSocket is down; WS is only a fallback.
+  fetch(`/task/${id}/${status}`,{method:'POST'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(t=>{if(t&&t.id!=null){tasks[t.id]=t;renderTasks();}pushEvent('SYS','t-sys',`Task #${id} → ${status} ✓`);})
+    .catch(()=>{
+      if(ws?.readyState===1){ws.send(JSON.stringify({type:'TASK_STATUS',id,status}));}
+      else{pushEvent('SYS','t-sys',`⚠️ Task #${id} → ${status} FAILED — server unreachable, try again`);}
+    });
+}
+function loadBacklog(){
+  // Populate the task list over HTTP so the backlog shows even before/without a WebSocket.
+  fetch('/backlog').then(r=>r.json()).then(d=>{
+    (d.tasks||[]).forEach(t=>{tasks[t.id]=t;});
+    if((d.tasks||[]).length)renderTasks();
+  }).catch(()=>{});
+}
 function cycleNow(){if(ws?.readyState===1){ws.send(JSON.stringify({type:'CYCLE'}));pushEvent('SYS','t-sys','Kaizen cycle requested...');}}
 
 function handleEvent(ev){
@@ -239,6 +255,8 @@ setInterval(()=>{
 },1000);
 
 connect();
+loadBacklog();
+setInterval(loadBacklog,60000);
 </script>
 </body>
 </html>
