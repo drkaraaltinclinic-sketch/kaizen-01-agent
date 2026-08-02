@@ -18,7 +18,7 @@ const fetch = require('node-fetch');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
-const { decide, buildLedger, fingerprint, MAX_AUTO_REJECT_PER_CYCLE, outcomesPromptBlock } = require('./kaizen-brain');
+const { decide, buildLedger, fingerprint, themeKey, MAX_AUTO_REJECT_PER_CYCLE, MAX_OPEN_BACKLOG, outcomesPromptBlock } = require('./kaizen-brain');
 const executor = require('./kaizen-executor');
 
 const PORT = process.env.PORT || 3021;
@@ -236,6 +236,32 @@ async function brainSweep() {
         }
       } else seen.set(fp, t.id);
     } else if (t.status !== 'REJECTED') seen.set(fp, t.id);
+  }
+  // Pass 2: THEME dedup — one open proposal per target+category; keep the newest
+  // (freshest telemetry), reject the rest as superseded.
+  const byTheme = new Map();
+  for (const t of state.tasks.filter(x => x.status === 'PROPOSED')) {
+    const key = themeKey(t);
+    const cur = byTheme.get(key);
+    if (!cur || new Date(t.createdAt) > new Date(cur.createdAt)) byTheme.set(key, t);
+  }
+  for (const t of state.tasks.filter(x => x.status === 'PROPOSED')) {
+    const keeper = byTheme.get(themeKey(t));
+    if (keeper && keeper.id !== t.id && rejects < MAX_AUTO_REJECT_PER_CYCLE) {
+      t.status = 'REJECTED';
+      t.rejectReason = `theme superseded by newer task #${keeper.id}`;
+      rejects++;
+      emit('TASK', 'kaizen.task.update', { id: t.id, status: 'REJECTED', target: t.target, title: t.title });
+    }
+  }
+  // Pass 3: backlog overflow — oldest PROPOSED beyond the cap are rejected.
+  const open = state.tasks.filter(x => x.status === 'PROPOSED')
+    .sort((x, y) => new Date(x.createdAt) - new Date(y.createdAt));
+  for (let i = 0; i < open.length - MAX_OPEN_BACKLOG && rejects < MAX_AUTO_REJECT_PER_CYCLE; i++) {
+    open[i].status = 'REJECTED';
+    open[i].rejectReason = `backlog overflow — open cap ${MAX_OPEN_BACKLOG}`;
+    rejects++;
+    emit('TASK', 'kaizen.task.update', { id: open[i].id, status: 'REJECTED', target: open[i].target, title: open[i].title });
   }
   if (rejects) emit('SYS', 'kaizen.sweep', { duplicatesRejected: rejects, backlogRemaining: state.tasks.filter(x => x.status === 'PROPOSED').length });
   for (const t of state.tasks.filter(x => x.status === 'ACCEPTED' && x.effort === 'ENV_VAR')) {

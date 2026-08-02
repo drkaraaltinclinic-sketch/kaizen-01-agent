@@ -29,7 +29,8 @@ const LOCKED_VARS = new Set([
 
 // Rate limits — a runaway propose→apply→measure loop is the main failure mode.
 const MAX_AUTO_APPLY_PER_DAY = 2;
-const MAX_AUTO_REJECT_PER_CYCLE = 6;
+const MAX_AUTO_REJECT_PER_CYCLE = 20;
+const MAX_OPEN_BACKLOG = 25;   // hard cap on open PROPOSED tasks — overflow auto-rejects oldest
 const MIN_HOURS_BETWEEN_APPLIES = 8;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -63,6 +64,23 @@ function buildLedger(tasks) {
     }
   }
   return led;
+}
+
+/**
+ * Theme key — deliberately COARSER than the fingerprint. One theme = one open
+ * proposal, full stop. This is what finally stops the reworded-duplicate flood:
+ * ALPHA-01|threshold tuning gets ONE seat at the table, however the prose varies.
+ */
+function themeKey(task) {
+  const t = obj(task);
+  return `${norm(t.target)}|${norm(t.category)}`;
+}
+
+function openThemeClash(task, tasks) {
+  const key = themeKey(task);
+  return arr(tasks).find((x) =>
+    (x.status === 'PROPOSED' || x.status === 'ACCEPTED') &&
+    x.id !== task.id && themeKey(x) === key) || null;
 }
 
 function isBlockedByLedger(task, ledger) {
@@ -115,6 +133,9 @@ function applyBudget(tasks, now = Date.now()) {
 function decide(task, { ledger, tasks, now = Date.now() } = {}) {
   const dup = isBlockedByLedger(task, ledger || new Map());
   if (dup) return { verdict: 'AUTO_REJECT', tier: null, reason: `duplicate — ${dup.reason} (task #${dup.ref.id})`, ref: dup.ref };
+
+  const clash = openThemeClash(task, tasks);
+  if (clash) return { verdict: 'AUTO_REJECT', tier: null, reason: `theme already open — one proposal per target+category (task #${clash.id})` };
 
   const cls = classifyTier(task);
   if (cls.tier === 'C') return { verdict: 'AUTO_REJECT', tier: 'C', reason: `constitutional — ${cls.reason}` };
@@ -300,7 +321,7 @@ function mountKaizenBrain(app, opts = {}) {
 }
 
 module.exports = {
-  mountKaizenBrain, fingerprint, buildLedger, isBlockedByLedger, classifyTier,
+  mountKaizenBrain, fingerprint, themeKey, openThemeClash, buildLedger, isBlockedByLedger, classifyTier,
   applyBudget, decide, decideBatch, fetchOutcomes, ledgerPromptBlock, outcomesPromptBlock,
-  LOCKED_VARS, MAX_AUTO_APPLY_PER_DAY, MAX_AUTO_REJECT_PER_CYCLE, MIN_HOURS_BETWEEN_APPLIES,
+  LOCKED_VARS, MAX_AUTO_APPLY_PER_DAY, MAX_AUTO_REJECT_PER_CYCLE, MIN_HOURS_BETWEEN_APPLIES, MAX_OPEN_BACKLOG,
 };
